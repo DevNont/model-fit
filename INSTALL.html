@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ติดตั้งและใช้งาน model-fit</title>
+<style>
+:root {
+  --bg: #ffffff;
+  --fg: #1f2328;
+  --muted: #59636e;
+  --line: #d1d9e0;
+  --code-bg: #f3f4f6;
+  --link: #0b5cad;
+  --th-bg: #f3f4f6;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a;
+    --fg: #e4e6ea;
+    --muted: #9aa3ad;
+    --line: #333a42;
+    --code-bg: #1e2227;
+    --link: #79b8ff;
+    --th-bg: #1e2227;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans Thai", "Sarabun", Tahoma, sans-serif;
+  line-height: 1.7;
+  font-size: 16px;
+}
+main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 1.7rem; line-height: 1.3; margin: 0 0 8px; }
+h2 { font-size: 1.25rem; margin: 40px 0 8px; padding-top: 16px; border-top: 1px solid var(--line); }
+h3 { font-size: 1.05rem; margin: 24px 0 4px; }
+p, ul, ol { margin: 8px 0; }
+a { color: var(--link); }
+.lead { color: var(--muted); margin: 0 0 16px; }
+nav { margin: 16px 0; padding: 12px 16px; border: 1px solid var(--line); border-radius: 6px; }
+nav ol { margin: 0; padding-left: 24px; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; background: var(--code-bg); padding: 1px 4px; border-radius: 3px; }
+.scroll { overflow-x: auto; max-width: 100%; margin: 8px 0; }
+pre { margin: 0; padding: 12px 14px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; overflow-x: auto; }
+pre code { background: none; padding: 0; font-size: 0.88rem; }
+table { border-collapse: collapse; width: 100%; min-width: 480px; font-size: 0.95rem; }
+th, td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+th { background: var(--th-bg); }
+.note { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+<h1>ติดตั้งและใช้งาน model-fit</h1>
+<p class="lead">คู่มือสั้นสำหรับ skill ของ Claude Code ที่ช่วยตัดสินใจว่างานไหนทำเอง งานไหนส่งให้ subagent</p>
+
+<nav aria-label="สารบัญ">
+<ol>
+<li><a href="#what">skill นี้คืออะไร</a></li>
+<li><a href="#benefits">ประโยชน์ที่ได้</a></li>
+<li><a href="#zip">ในไฟล์ zip มีอะไร</a></li>
+<li><a href="#install">วิธีติดตั้ง</a></li>
+<li><a href="#check">ตรวจว่าติดตั้งแล้ว</a></li>
+<li><a href="#use">วิธีใช้งาน</a></li>
+<li><a href="#rule">กติกาโดยย่อ</a></li>
+<li><a href="#models">ถ้าไม่ได้ใช้ครบทุก model</a></li>
+<li><a href="#project">กติกาของโปรเจกต์มาก่อน</a></li>
+<li><a href="#update">อัปเดตและถอนการติดตั้ง</a></li>
+<li><a href="#tuning">ปรับค่า</a></li>
+</ol>
+</nav>
+
+<h2 id="what">1. skill นี้คืออะไร</h2>
+<p>model-fit เป็น skill ที่ช่วยตัดสินใจว่าแต่ละงานควรให้ main thread ทำเอง หรือส่งให้ subagent ทำ และถ้าส่ง ควรใช้ model ไหน</p>
+<p>การตัดสินใจนี้ครอบคลุมทุกช่วงของ SDLC คือ วางแผน, เขียนโค้ด, ตรวจสอบ, เขียน docs, และ commit/release</p>
+<p>เหตุผลคือ subagent มีต้นทุนคงที่ ได้แก่ context ของตัวเอง, brief ที่ต้องเขียนใหม่, การอ่านไฟล์ซ้ำ, และ report ที่ main thread ยังต้องตรวจอีกรอบ จึงคุ้มก็ต่อเมื่องานใหญ่ ทำขนานกันได้ หรือต้องอ่านไฟล์จำนวนมาก</p>
+<p>skill นี้ลดการใช้ token โดยไม่ลดมาตรฐานการตรวจสอบ</p>
+
+<h2 id="benefits">2. ประโยชน์ที่ได้</h2>
+<p>ประโยชน์หลักคือใช้ token น้อยลง โดยงานยังถูกตรวจในมาตรฐานเดิม ยังไม่ได้วัดว่าประหยัดได้เท่าไร</p>
+
+<h3>1. ลด token ที่เสียไปกับการเปิด agent โดยไม่จำเป็น</h3>
+<ul>
+<li>subagent มีต้นทุนคงที่ คือ context ของตัวเอง, brief, การอ่านไฟล์ซ้ำ, และ report ที่ยังต้องตรวจ งานแก้ไม่กี่บรรทัดจึงทำบน main thread</li>
+<li>งานที่แก้เหมือนกันหลายไฟล์หรือหลาย repo ใช้ script loop เดียว ไม่เปิด agent หนึ่งตัวต่อหนึ่งเป้าหมาย</li>
+</ul>
+
+<h3>2. ใช้ model ราคาแพงเฉพาะงานที่ต้องใช้</h3>
+<ul>
+<li><code>haiku</code> สำหรับการค้นหา, <code>sonnet</code> สำหรับงานเขียนที่ระบุชัด, <code>opus</code> สำหรับ implement จริง</li>
+<li>คนที่มีโควตาน้อยหรือจ่ายตาม token ได้ประโยชน์มากที่สุด</li>
+</ul>
+
+<h3>3. session ยาวได้โดย context ไม่เต็มเร็ว</h3>
+<ul>
+<li>งานที่ต้องอ่านไฟล์เยอะส่งให้ agent แล้วได้ report กลับมาไม่เกินราว 25 บรรทัด</li>
+<li>เมื่อ context ใกล้เต็ม กติกาจะส่งต่อให้ agent มากขึ้น</li>
+</ul>
+
+<h3>4. งานเสร็จเร็วขึ้น</h3>
+<ul>
+<li>งานอิสระ (เช่น backend + frontend) ทำขนานกันได้</li>
+<li>งานต่อเนื่องส่งกลับไปที่ agent ตัวเดิม จึงไม่ต้องอ่านซ้ำ</li>
+<li>hotfix ข้ามขั้นวางแผนเต็มรูปแบบ</li>
+</ul>
+
+<h3>5. คุณภาพไม่ตกเมื่อใช้ model ถูกลง</h3>
+<ul>
+<li>ผลจากทุก agent ถูกตรวจเองก่อนรายงานว่าเสร็จ</li>
+<li>การตัดสินใจ, commit และ release อยู่บน main thread และไม่ข้ามการตรวจเพื่อประหยัด token</li>
+</ul>
+
+<h3>6. ทำงานแบบเดียวกันทุกครั้งและทุกคน</h3>
+<ul>
+<li>ไม่ต้องอธิบายซ้ำว่าเมื่อไรควรใช้ agent หรือใช้ model ไหน</li>
+<li>ทีมที่ติดตั้ง skill เดียวกันจะแบ่งงานเหมือนกัน และ report จะบอกเสมอว่า model ไหนทำส่วนไหน</li>
+</ul>
+
+<h3>ข้อจำกัด</h3>
+<ul>
+<li>เกณฑ์ (2 ไฟล์, ~40 บรรทัด, 3 agent) เป็นค่าเริ่มต้น ไม่ได้มาจากการวัด</li>
+<li>skill เป็นแนวทางสำหรับ Claude ไม่ใช่การบังคับระดับระบบ Claude จึงอาจไม่ทำตามทุกครั้ง</li>
+<li>งานเล็กที่ทำบน main thread ใช้ model ของ session นั้น ถ้า session ใช้ model ราคาแพง งานเล็กก็คิดราคานั้น</li>
+</ul>
+
+<h2 id="zip">3. ในไฟล์ zip มีอะไร</h2>
+<ul>
+<li><code>model-fit/SKILL.md</code> ตัว skill</li>
+<li><code>INSTALL.html</code> คู่มือฉบับนี้</li>
+</ul>
+
+<h2 id="install">4. วิธีติดตั้ง</h2>
+<p>เลือกวิธีเดียวที่เหมาะกับคุณ แล้วเปิด session ใหม่ของ Claude Code หลังติดตั้งทุกครั้ง</p>
+
+<h3>3a. ส่วนตัว ใช้ได้ทุกโปรเจกต์ (macOS / Linux)</h3>
+<p>แตก zip แล้วเปิด terminal ในโฟลเดอร์ที่แตกออกมา</p>
+<div class="scroll"><pre><code>mkdir -p ~/.claude/skills &amp;&amp; cp -r model-fit ~/.claude/skills/</code></pre></div>
+<p>จากนั้นเปิด Claude Code session ใหม่</p>
+
+<h3>3b. ส่วนตัว (Windows, PowerShell)</h3>
+<p>แตก zip แล้วเปิด PowerShell ในโฟลเดอร์ที่แตกออกมา</p>
+<div class="scroll"><pre><code>New-Item -ItemType Directory -Force "$env:USERPROFILE\.claude\skills"
+Copy-Item -Recurse model-fit "$env:USERPROFILE\.claude\skills\"</code></pre></div>
+<p>จากนั้นเปิด Claude Code session ใหม่</p>
+
+<h3>3c. ทั้งทีม ผ่าน repo</h3>
+<p>รันในโฟลเดอร์ root ของ repo</p>
+<div class="scroll"><pre><code>mkdir -p .claude/skills &amp;&amp; cp -r model-fit .claude/skills/
+git add .claude/skills/model-fit
+git commit -m "add model-fit skill"</code></pre></div>
+<p>ทุกคนที่เปิด Claude Code ใน repo นี้จะได้ skill ไปด้วย (หลัง pull แล้วเปิด session ใหม่)</p>
+
+<h3>3d. คัดลอกไปเครื่องอื่น</h3>
+<p>แทน <code>&lt;user&gt;</code> และ <code>&lt;host&gt;</code> ด้วยค่าของเครื่องปลายทาง</p>
+<div class="scroll"><pre><code>scp -r ~/.claude/skills/model-fit &lt;user&gt;@&lt;host&gt;:~/.claude/skills/</code></pre></div>
+<p>จากนั้นเปิด Claude Code session ใหม่บนเครื่องนั้น</p>
+
+<h2 id="check">5. ตรวจว่าติดตั้งแล้ว</h2>
+<ul>
+<li>พิมพ์ <code>/</code> ใน Claude Code แล้วดูว่ามี <code>model-fit</code> ในรายการ</li>
+<li>หรือถามว่า <code>มี skill อะไรบ้าง</code></li>
+</ul>
+<p>โครงสร้างโฟลเดอร์สุดท้ายต้องเป็น <code>.../skills/model-fit/SKILL.md</code></p>
+<p>ข้อผิดพลาดที่พบบ่อยคือโฟลเดอร์ซ้อนกัน เป็น <code>skills/model-fit/model-fit/SKILL.md</code> ถ้าเป็นแบบนี้ skill จะไม่ขึ้น ให้ย้ายโฟลเดอร์ข้างในขึ้นมาหนึ่งระดับ</p>
+
+<h2 id="use">6. วิธีใช้งาน</h2>
+<h3>สามวิธี</h3>
+<ol>
+<li><strong>เรียกเอง</strong> พิมพ์ <code>/model-fit</code></li>
+<li><strong>ให้โหลดเอง</strong> skill จะโหลดเมื่อเริ่มฟีเจอร์หรือแก้บั๊ก, เมื่อจะเปิด subagent, เมื่อเลือก model, หรือเมื่อคุยเรื่องประหยัด token</li>
+<li><strong>บังคับให้โหลดทุกครั้ง</strong> เพิ่มบรรทัดนี้ใน CLAUDE.md ของโปรเจกต์
+<div class="scroll"><pre><code>ก่อนเริ่มงานฟีเจอร์ แก้บั๊ก หรือเปิด subagent ให้โหลด skill model-fit ก่อนเสมอ</code></pre></div>
+</li>
+</ol>
+<h3>ตัวอย่าง prompt</h3>
+<div class="scroll"><pre><code>/model-fit เพิ่มหน้ารายงานใหม่ ต้องแก้ทั้ง backend และ frontend วางแผนให้หน่อย
+ต้องสำรวจโค้ดหลายไฟล์ ควรใช้ subagent ไหม และ model อะไร
+session ยาวแล้ว ช่วยประหยัด token ในงานที่เหลือ</code></pre></div>
+
+<h2 id="rule">7. กติกาโดยย่อ</h2>
+
+<h3>ทำเองหรือส่งต่อ</h3>
+<div class="scroll"><table>
+<thead><tr><th>ทำเอง (inline) เมื่อครบทุกข้อ</th><th>ส่งต่อให้ subagent เมื่อมีข้อใดข้อหนึ่ง</th></tr></thead>
+<tbody>
+<tr>
+<td>
+ไฟล์ถูกอ่านใน conversation นี้แล้ว หรือรู้เป้าหมายแน่ชัด<br>
+ไม่เกิน ~2 ไฟล์ และแก้ไม่เกิน ~40 บรรทัด<br>
+ไม่เหลือการตัดสินใจด้านออกแบบที่ยังเปิดอยู่<br>
+นอกจากนี้ งานที่แก้เหมือนกันแบบกลไกหลายไฟล์หรือหลาย repo ให้ทำเองด้วย script loop แล้วตรวจด้วย grep
+</td>
+<td>
+ตั้งแต่ 3 ไฟล์ขึ้นไป หรือฟีเจอร์ที่มี test และ docs ของตัวเอง<br>
+มีงานอิสระตั้งแต่สองชิ้นที่ทำขนานกันได้ (เช่น backend + frontend)<br>
+ต้องอ่านไฟล์จำนวนมากที่ยังไม่เคยอ่าน (สำรวจ, audit, ขุด log)<br>
+แก้ซ้ำหลายเป้าหมายที่ต้องใช้ดุลยพินิจรายเป้าหมาย<br>
+อยู่ใน layer ที่มีกติกาเข้มเกินกว่าไม่กี่บรรทัด
+</td>
+</tr>
+</tbody>
+</table></div>
+<p class="note">ไม่ส่งต่อ: การค้นหาที่รู้เป้าหมายแล้ว, การเช็คที่ใช้คำสั่งเดียว, diff ที่เล็กพอจะอ่านเอง ถ้า session ยาวหรือ context ใกล้เต็ม ให้ลดเกณฑ์ inline ลง</p>
+
+<h3>เลือก model ตามงาน</h3>
+<div class="scroll"><table>
+<thead><tr><th>Model</th><th>ใช้กับ</th></tr></thead>
+<tbody>
+<tr><td><code>haiku</code></td><td>งานอ่านอย่างเดียวที่ตรวจคำตอบได้ เช่น หาตำแหน่ง, ไล่ดูการใช้งาน, สรุป log</td></tr>
+<tr><td><code>sonnet</code></td><td>งานเขียนที่ขอบเขตชัดและระบุครบ เช่น แก้ตามบรรทัดที่ระบุ, CSS, copy, changelog, docs, test ตามแบบที่มีอยู่</td></tr>
+<tr><td><code>opus</code></td><td>งาน implement จริง เช่น ฟีเจอร์หลายไฟล์, backend, state / concurrency / migration / auth, งานที่ยังมีทางเลือกด้านออกแบบ</td></tr>
+<tr><td><code>fable</code></td><td>เฉพาะ second opinion ด้านออกแบบ, ไล่หา root cause ที่ติดอยู่, review เชิงตรงข้ามกับงานเสี่ยง ไม่ใช้สร้างงาน</td></tr>
+</tbody>
+</table></div>
+<p class="note">ลังเลระหว่างสองระดับ: ขึ้นหนึ่งระดับสำหรับสิ่งที่ถึงผู้ใช้ ลงหนึ่งระดับสำหรับงานอ่านอย่างเดียว เลือกต่องาน ไม่ใช่ต่อ session</p>
+
+<h3>ใครรับผิดชอบแต่ละช่วง SDLC</h3>
+<div class="scroll"><table>
+<thead><tr><th>ช่วง</th><th>ผู้ทำ</th><th>Model</th><th>กติกา token</th></tr></thead>
+<tbody>
+<tr><td>1 เข้าใจและวางแผน</td><td>main thread; ใช้ search agent เฉพาะเมื่อยังไม่รู้ pattern ที่จะอิง</td><td>haiku สำหรับการค้นหา</td><td>หา pattern เดิมมาอิงหนึ่งตัวแล้วหยุดค้น</td></tr>
+<tr><td>2 Implement</td><td>inline หรือ builder ขนานกันตามหัวข้อ "ทำเองหรือส่งต่อ"</td><td>opus / sonnet ตามตาราง model</td><td>brief ระบุไฟล์ pattern ที่ต้องอิง</td></tr>
+<tr><td>3 ตรวจสอบ</td><td>main thread</td><td>-</td><td>ตรวจเองจริง ไม่ข้ามเพื่อประหยัด token</td></tr>
+<tr><td>4 Docs</td><td>inline ถ้าเป็นหนึ่งบรรทัดหรือหนึ่งย่อหน้า ไม่เช่นนั้นใช้ agent เดียวทั้งชุด</td><td>sonnet</td><td>ไม่ใช้หนึ่ง agent ต่อหนึ่งไฟล์</td></tr>
+<tr><td>5 Commit · push · release</td><td>main thread ไม่ส่งต่อ</td><td>-</td><td>สถานะ git และ deploy ต้องเห็นเอง</td></tr>
+</tbody>
+</table></div>
+
+<h3>ขนาดของรอบงาน</h3>
+<ul>
+<li><strong>Hotfix / แก้บรรทัดเดียว:</strong> ทำช่วง 2, 3, 5 แบบ inline ไม่ใช้ agent ไม่ต้องมี plan file</li>
+<li><strong>ฟีเจอร์เล็ก (repo เดียว ไม่กี่ไฟล์):</strong> แผนสั้นไม่กี่บรรทัด ทำ inline หรือใช้ sonnet หนึ่ง agent แล้ว verify และ commit</li>
+<li><strong>ฟีเจอร์ข้าม layer:</strong> วางแผนก่อน ใช้ opus builder ขนานกัน ใช้ sonnet หนึ่งรอบสำหรับ docs, main thread ตรวจเอง และประกาศถึงผู้ใช้ถ้าโปรเจกต์มีช่องทางนั้น</li>
+</ul>
+
+<h2 id="models">8. ถ้าไม่ได้ใช้ครบทุก model</h2>
+<p>แต่ละ plan และการตั้งค่า API ใช้ได้ไม่ครบเหมือนกัน พิมพ์ <code>/model</code> เพื่อดูว่า session ของคุณใช้ model อะไรได้บ้าง แล้วลดระดับตามตารางนี้แทนที่จะให้งานล้ม</p>
+<div class="scroll"><table>
+<thead><tr><th>กรณี</th><th>ให้ทำอย่างไร</th></tr></thead>
+<tbody>
+<tr><td>ไม่มี <code>fable</code></td><td>ใช้ model ที่แรงที่สุดที่มีสำหรับงาน second opinion หรือข้าม second opinion แล้ว review ให้ละเอียดขึ้นบน main thread</td></tr>
+<tr><td>ไม่มี <code>opus</code> หรือมีน้อย</td><td>ให้ <code>sonnet</code> สร้างงาน โดยเขียน brief ให้ชัดขึ้น (ระบุไฟล์ pattern, ฟังก์ชันที่แน่ชัด, edge case) และลดขอบเขตต่อ agent ส่วนการตัดสินใจด้านออกแบบอยู่บน main thread</td></tr>
+<tr><td>มี model เดียว</td><td>คอลัมน์ model ไม่มีผลแล้ว แต่กติกาที่เหลือยังใช้ได้ การส่งต่อประหยัด context ไม่ใช่ต้นทุน model จึงส่งต่อเฉพาะงานขนานและงานอ่านที่ท่วม main context</td></tr>
+<tr><td>limit ตึงหรือจ่ายตาม token</td><td>ยกเกณฑ์ inline ขึ้น (ใช้ agent น้อยลง), จำกัดงานพร้อมกันที่ 1-2, ใช้ <code>haiku</code> กับทุกการค้นหา และไม่กระจายการตรวจเดียวกันให้หลาย agent</td></tr>
+</tbody>
+</table></div>
+<p>ถ้าการระบุ <code>model</code> ถูกปฏิเสธ อย่าลองซ้ำ ให้ลงไประดับถัดไปและบอกว่า model ไหนทำงานจริง</p>
+
+<h2 id="project">9. กติกาของโปรเจกต์มาก่อน</h2>
+<p>ถ้า CLAUDE.md หรือ memory ของโปรเจกต์มีกติกาของตัวเองเรื่องชนิด agent, gate, หรือขั้นตอน release ให้ใช้กติกาของโปรเจกต์ก่อน skill นี้ให้แค่เกณฑ์การแบ่งงานและวินัยเรื่องต้นทุน</p>
+
+<h2 id="update">10. อัปเดตและถอนการติดตั้ง</h2>
+<ul>
+<li><strong>อัปเดต:</strong> แทนที่โฟลเดอร์ <code>model-fit</code> ด้วยฉบับใหม่ แล้วเปิด session ใหม่</li>
+<li><strong>ถอนการติดตั้ง:</strong> ลบโฟลเดอร์ <code>model-fit</code> ออกจาก <code>skills/</code> แล้วเปิด session ใหม่</li>
+</ul>
+
+<h2 id="tuning">11. ปรับค่า</h2>
+<p>ตัวเลขใน skill (2 ไฟล์, ~40 บรรทัด, report ~25 บรรทัด, 3 agent) เป็นค่าเริ่มต้น ไม่ได้มาจากการวัด</p>
+<p>ถ้า subagent ส่งงานกลับมาแล้วต้องแก้ใหม่บ่อย ให้เข้มขึ้น ถ้า main context เต็มบ่อย ให้ผ่อนลง</p>
+</main>
+</body>
+</html>
