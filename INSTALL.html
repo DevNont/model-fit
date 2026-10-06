@@ -173,10 +173,22 @@ git commit -m "add model-fit skill"</code></pre></div>
 <ol>
 <li><strong>เรียกเอง</strong> พิมพ์ <code>/model-fit</code></li>
 <li><strong>ให้โหลดเอง</strong> skill จะโหลดเมื่อเริ่มฟีเจอร์หรือแก้บั๊ก, เมื่อจะเปิด subagent, เมื่อเลือก model, หรือเมื่อคุยเรื่องประหยัด token</li>
-<li><strong>บังคับให้โหลดทุกครั้ง</strong> เพิ่มบรรทัดนี้ใน CLAUDE.md ของโปรเจกต์
-<div class="scroll"><pre><code>ก่อนเริ่มงานฟีเจอร์ แก้บั๊ก หรือเปิด subagent ให้โหลด skill model-fit ก่อนเสมอ</code></pre></div>
+<li><strong>บังคับให้โหลดทุกครั้ง</strong> เพิ่มบรรทัดนี้ใน CLAUDE.md
+<div class="scroll"><pre><code>ก่อนเริ่มงานฟีเจอร์ แก้บั๊ก refactor หรือเปิด subagent ให้โหลด skill model-fit ก่อนเสมอ</code></pre></div>
 </li>
 </ol>
+<h3>ให้ทุก session ใช้โดยอัตโนมัติ</h3>
+<p>ติดตั้ง skill แล้ว ทุก session ใช้ได้ แต่ Claude จะโหลดเฉพาะเมื่อเห็นว่างานเข้าข่าย ถ้าต้องการให้โหลดทุกครั้ง ให้ใส่บรรทัดบังคับด้านบนไว้ในไฟล์ CLAUDE.md ตามขอบเขตที่ต้องการ</p>
+<div class="scroll"><table>
+<thead><tr><th>ขอบเขต</th><th>ไฟล์ที่ใส่บรรทัดบังคับ</th><th>skill ต้องอยู่ที่</th></tr></thead>
+<tbody>
+<tr><td>ทุกโปรเจกต์บนเครื่องนี้ รวม session ที่จะเปิดในอนาคต</td><td><code>~/.claude/CLAUDE.md</code> (ถ้ายังไม่มีให้สร้าง)</td><td><code>~/.claude/skills/model-fit/</code></td></tr>
+<tr><td>ทุกคนที่ทำงานใน repo หนึ่ง</td><td><code>CLAUDE.md</code> ของ repo แล้ว commit</td><td><code>.claude/skills/model-fit/</code> ใน repo</td></tr>
+</tbody>
+</table></div>
+<p>สร้างไฟล์ระดับเครื่องด้วยคำสั่งเดียว (macOS / Linux):</p>
+<div class="scroll"><pre><code>echo 'ก่อนเริ่มงานฟีเจอร์ แก้บั๊ก refactor หรือเปิด subagent ให้โหลด skill model-fit ก่อนเสมอ' &gt;&gt; ~/.claude/CLAUDE.md</code></pre></div>
+<p>บรรทัดใน CLAUDE.md เป็นคำสั่งถึง Claude ไม่ใช่การบังคับระดับระบบ และเครื่องอื่นต้องติดตั้ง skill กับสร้างไฟล์นี้เองอีกครั้ง</p>
 <h3>ตัวอย่าง prompt</h3>
 <div class="scroll"><pre><code>/model-fit เพิ่มหน้ารายงานใหม่ ต้องแก้ทั้ง backend และ frontend วางแผนให้หน่อย
 ต้องสำรวจโค้ดหลายไฟล์ ควรใช้ subagent ไหม และ model อะไร
