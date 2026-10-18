@@ -4,8 +4,7 @@ Read this when the main thread is on the top tier (`fable`, or `opus` when
 usage is tight). On a mid-tier main model, skip it and use the thresholds in
 SKILL.md §2.
 
-Applies when the main thread runs on the top tier (`fable`, or `opus` when
-usage is tight). The cost of small inline work is not its few lines — it is
+The cost of small inline work is not its few lines — it is
 every extra main-thread turn, each of which re-reads the whole context on the
 expensive model. So spend fewer main turns, and move small work to a place
 with a small context.
