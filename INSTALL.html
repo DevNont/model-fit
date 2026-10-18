@@ -130,7 +130,8 @@ th { background: var(--th-bg); }
 
 <h2 id="zip">3. ในไฟล์ zip มีอะไร</h2>
 <ul>
-<li><code>model-fit/SKILL.md</code> ตัว skill</li>
+<li><code>model-fit/SKILL.md</code> ตัว skill (กติกาแกน)</li>
+<li><code>model-fit/references/</code> อีก 3 ไฟล์ที่ Claude อ่านเฉพาะเมื่อเข้าเคส: <code>expensive-main.md</code> (model หลักราคาแพง), <code>teams-and-workflows.md</code> (ทีม agent / workflow), <code>sdlc.md</code> (ตาราง SDLC) ต้อง copy ทั้งโฟลเดอร์</li>
 <li><code>INSTALL.html</code> คู่มือฉบับนี้</li>
 </ul>
 
@@ -269,6 +270,18 @@ session ยาวแล้ว ช่วยประหยัด token ในง�
 <li><strong>ตั้งงบทั้งงาน ไม่ใช่แค่จำนวนพร้อมกัน:</strong> "3 ตัวพร้อมกัน" เป็นเกณฑ์ต่อข้อความ ทีมหรือ workflow ให้ตั้งงบจำนวน agent ทั้งงานไว้ก่อน (workflow ขนาดกลางไม่เกิน 10 agent) ถึงงบแล้วหยุดรายงาน ไม่เปิดเพิ่มเงียบ ๆ</li>
 <li><strong>งานเบื้องหลังไม่ต้อง poll:</strong> ทีมและ workflow แจ้งเองเมื่อเสร็จ ไม่เปิดหรือปลุก agent เพื่อไปดูอีกตัว รอการแจ้ง และไม่ทายผลล่วงหน้า</li>
 <li><strong>การตรวจไม่ลดลงตามขนาดทีม:</strong> ผลงานของทุกสมาชิกและผลสุดท้ายของ workflow ต้องผ่านการตรวจเองของ main thread คำตัดสินของ reviewer agent เป็นข้อมูลประกอบ ไม่ใช่ตัวแทน</li>
+</ul>
+
+<h3>กติกาที่เพิ่ม 2026-10-18</h3>
+<ul>
+<li><strong>เลือกชนิด agent ก่อนเลือก model:</strong> งานค้น/ตรวจใช้ agent แบบอ่านอย่างเดียว (Explore หรือ investigator ของโปรเจกต์) จะได้แก้ไฟล์ไม่ได้โดยบังเอิญ งานสร้างใช้ builder ของโปรเจกต์ถ้ามี แล้วค่อยเลือกระดับ model ในชนิดนั้น</li>
+<li><strong><code>fork</code> ใช้เมื่อไหร่:</strong> ใช้ model เดียวกับแม่และสืบทอด context ทั้งหมด จึงเหมาะเฉพาะเมื่อ brief จะต้องเล่า session นี้ซ้ำยาว ๆ (เช่น review สิ่งที่ตัดสินไปในรอบนี้) และห้ามใช้ปลาย session ยาว เพราะจ่าย context ทั้งก้อนอีกครั้ง</li>
+<li><strong>ไม่ตั้ง <code>effort</code> เอง:</strong> ปล่อยค่าเริ่มต้นของ agent เว้นแต่ผู้ใช้หรือกฎโปรเจกต์สั่ง ตัวเลือก model คือคันโยกของ skill นี้</li>
+<li><strong>brief มี template:</strong> Goal / Ruled out / Read / Touch / Mirror / Rules / Gates / Report ≤ 25 บรรทัด กรอกทุกบรรทัด ไม่ลบบรรทัดไหน model เล็กทำตามโครงได้ดีกว่าอ่านคำบรรยาย</li>
+<li><strong>builder ขนานบน repo เดียว ใช้ <code>isolation: worktree</code>:</strong> แต่ละตัวได้ worktree ของตัวเอง ไม่เขียนทับกัน worktree ที่ไม่มีการเปลี่ยนแปลงถูกเก็บกวาดเอง agent อ่านอย่างเดียวไม่ต้องใช้</li>
+<li><strong>แก้ซ้ำได้ 1 รอบ แล้วยกระดับ:</strong> ผลงานผิดหรือไม่ครบ ส่งคำแก้ 1 ครั้งให้ agent ตัวเดิมโดยระบุช่องว่างให้ชัด ถ้ารอบสองยังผิด หยุด ทำเองหรือเริ่มใหม่ด้วย model สูงกว่าหนึ่งขั้น ไม่มีรอบที่สามกับตัวเดิม</li>
+<li><strong>สัญญาณว่า context เต็ม:</strong> มี compaction summary แทนบทสนทนาเก่าแล้ว · กำลังจะอ่านไฟล์ที่เคยอ่านซ้ำ · ต้องเลื่อนกลับไปดู output เก่าเพื่อตอบ · งานข้ามวันบน session เดิม เจอข้อใดข้อหนึ่ง ให้ลดเกณฑ์ inline ลงทันที</li>
+<li><strong>บันทึกทุกงานที่ส่งต่อ 1 บรรทัด:</strong> <code>delegated: &lt;job&gt; · &lt;agent type&gt;/&lt;model&gt; · &lt;n&gt; rounds · redo: yes/no · &lt;why&gt;</code> ลง work log หรือ prompt log ของโปรเจกต์ เป็นข้อมูลชุดเดียวที่ใช้ปรับตัวเลขเกณฑ์ในหัวข้อ "ปรับค่า"</li>
 </ul>
 
 <h3>เมื่อ model หลักราคาแพง</h3>

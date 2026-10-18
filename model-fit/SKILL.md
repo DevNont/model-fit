@@ -13,7 +13,19 @@ below follows from that.
 
 If the project has its own rules (CLAUDE.md, memory, a project skill) for
 agent types, gates, branch flow or release steps, those win; this skill
-supplies the split and the cost discipline.
+supplies the split and the cost discipline. When the project defines its own
+agent types (a builder for its backend, an investigator, a fan-out worker),
+prefer the matching one over a general-purpose agent.
+
+Longer material lives next to this file and is read only when its case
+applies — do not load it up front:
+
+- `references/expensive-main.md` — small work when the main thread runs on a
+  top-tier model (session helper, batching, fewer main turns).
+- `references/teams-and-workflows.md` — more than one agent on a task:
+  parallel agents, a team of roles, workflow scripts.
+- `references/sdlc.md` — owner, model and token rule per development phase,
+  and how to scale the cycle (hotfix · small feature · cross-layer).
 
 ## 1. Roles
 
@@ -46,42 +58,19 @@ Delegate when ANY hold:
 - work in a layer with heavy conventions (e.g. a backend with its own
   architecture rules) beyond a few lines.
 
-Protect the main context: when the session is long or the context is filling,
-lower the inline threshold — delegate reads and edits you would otherwise do
-inline.
-
 Never delegate: a lookup whose target is known, a one-command check, a diff
 small enough to read directly.
 
-### Small work when the main model is expensive
+**When the main thread is on the top tier** (`fable`, or `opus` when usage is
+tight) the inline threshold drops to one file / ~10 lines, and small work goes
+to one session helper in batches — read `references/expensive-main.md`.
 
-Applies when the main thread runs on the top tier (`fable`, or `opus` when
-usage is tight). The cost of small inline work is not its few lines — it is
-every extra main-thread turn, each of which re-reads the whole context on the
-expensive model. So spend fewer main turns, and move small work to a place
-with a small context.
-
-- **Fewer main-thread turns.** Put independent tool calls in one turn, make
-  several edits per turn, script a repeated edit instead of editing file by
-  file, do not re-read a file you just wrote, do not narrate between calls.
-- **Inline only the trivial.** One file, about 10 lines, already read. The
-  ≤ 2 files / ~40 lines threshold above is for a mid-tier main model.
-- **One session helper.** At the first small job, spawn ONE `sonnet` agent as
-  a helper and brief it once with the repo conventions and the gates. Send
-  every later small job to that same helper with SendMessage — the spawn cost
-  is paid once. The helper edits; it does not decide design, commit or push.
-  Start a fresh helper when the work moves to an unrelated part of the code,
-  or when its reports start missing things.
-- **Batch small jobs.** Collect small edits that do not block each other and
-  send them as one numbered list; ask for one report. Do not hold back a job
-  the user is waiting on, and flush the batch before verifying.
-- **Tell the user about mechanical stretches.** When the next stretch is
-  mechanical (repeated edits, copy changes, version bumps), say once that a
-  cheaper session model would do (`/model sonnet`) and that planning and
-  review should go back to the stronger one. Only the user can switch; never
-  assume they did.
-
-On a mid-tier main model, skip this section and use the thresholds above.
+**Protect the main context.** Lower the inline threshold — delegate reads and
+edits you would otherwise do inline — as soon as any of these has happened:
+- a compaction summary has replaced earlier turns;
+- you are about to re-read a file you already read in this session;
+- you are scrolling back through old tool output to answer something;
+- the work has run into a second day on the same session.
 
 ## 3. Model per job
 
@@ -93,8 +82,20 @@ On a mid-tier main model, skip this section and use the thresholds above.
 | `fable` | only a second-opinion design review, a stalled root-cause hunt, an adversarial review of a risky change — not for building |
 
 Unsure between two tiers: one up for what ships to users, one down for
-read-only. The choice is per task, not per session. A `fork` always runs on
-the parent model, so it is not a way to pick a cheaper one.
+read-only. The choice is per task, not per session.
+
+- **Agent type first, then model.** For a search or an audit pick a read-only
+  type (an Explore-style agent, or the project's investigator) so it cannot
+  edit anything by accident; for building pick the project's own builder when
+  it has one. The table above then picks the tier inside that type.
+- **`fork`** always runs on the parent model and inherits the whole
+  conversation, so it is not a way to pick a cheaper model. Use it only when
+  the brief would otherwise have to restate much of this session (a review of
+  decisions made here, continuing a half-done analysis) — and never late in a
+  long session, because the fork pays for the entire context again.
+- **`effort` is not yours to set.** Leave an agent's reasoning effort at its
+  default unless the user or a project rule explicitly asks for a level; the
+  model choice is the lever this skill uses.
 
 ### When some models are not available
 
@@ -133,61 +134,39 @@ independent review, hand over the code, not your conclusion.
 Always ask for a capped report: paths changed with one line each, gate
 results, open questions — ≤ ~25 lines, no diff paste, no file dumps.
 
+Template (fill every line; delete none — a smaller model follows the shape
+better than the prose above):
+
+```
+Goal: <one sentence; what "done" looks like>
+Ruled out: <what is already known not to be the cause / not to be done>
+Read: <exact paths, in the order to read them>
+Touch: <exact paths the agent may change — nothing else>
+Mirror: <the one existing file whose pattern to copy>
+Rules: <conventions that bind, and the project file that states them>
+Gates: <commands that must pass before reporting>
+Report (≤ 25 lines): paths changed, one line each · gate results · open questions. No diffs, no file dumps.
+```
+
 ## 5. Run
 
 - Independent pieces go out in one message; at most 3 concurrent agents
   unless a fan-out genuinely needs one per target.
-- No two agents on overlapping files; no agent "just in case".
+- No two agents on overlapping files; no agent "just in case". Two builders
+  that must work on the same repo at once each get their own worktree
+  (`isolation: worktree`) so they cannot write over each other; a worktree
+  that ends with no change cleans itself up. A read-only agent needs none.
 - A follow-up goes to the SAME agent (SendMessage) — a fresh one pays the
   whole read again.
+- **One retry, then escalate.** When a report comes back wrong or incomplete,
+  send ONE correction to the same agent naming the exact gap. If the second
+  result is still wrong, stop: do it inline, or restart with a model one tier
+  up and a brief that names the failure. Never a third round on the same agent.
 - Once delegated, do not also do or read that piece. Wait for the report, and
   never predict or invent it.
-
-## 5b. Teams and workflows
-
-Three ways to run more than one agent, in rising order of cost. Climb a rung
-only when the cheaper one cannot do the job.
-
-| Rung | What it is | Use when |
-|---|---|---|
-| Parallel agents | 2–3 independent `Agent` calls in one message; each reports back to the main thread | independent pieces with no ordering between them (§5) |
-| Agent team | a few long-lived agents with distinct roles (builder · reviewer · docs) that the main thread keeps for the whole task through SendMessage | the task runs through several rounds (build → review → fix) and each round needs the same role's earlier context |
-| Workflow | a script that orchestrates agents deterministically (pipeline / parallel / phases) and runs in the background | ≥ 4 dependent stages or a fan-out over many targets — AND the user asked for it |
-
-Rules:
-- **A workflow is opt-in by the user, never by the model.** It can spend
-  dozens of agents in one burst. Run one only when the user said so (a
-  keyword such as `ultracode`, "use a workflow", or a skill that calls for
-  it). Otherwise describe what it would do and its rough cost, and ask. A
-  task that would merely benefit from one does not qualify.
-- **Size the team to the rounds, not to the files.** Every round pays for
-  every member's context. Two roles (builder + reviewer) cover most tasks;
-  add a third only when docs or tests are a separate stream. Beyond three, a
-  workflow is cheaper and more predictable.
-- **Builder and reviewer are different agents — and different models when
-  possible.** A reviewer that shares the builder's context or conclusions
-  anchors on them. Hand the reviewer the diff and the spec, not the builder's
-  report. One tier down for style and gates; one tier up, or the main
-  thread, for design and risk.
-- **One main thread owns the team.** Members report to the main thread, not
-  to each other, and the main thread relays what matters. Peer-to-peer
-  messages are for handing over a concrete artefact (a path, a failing test
-  name), never for decisions — those stay with the main thread (§1).
-- **Reuse before you spawn.** Before starting a team, check `ListAgents` for
-  an agent or session that already holds the context: an earlier helper,
-  another local session on the same repo, a cloud session. A message to it
-  costs one turn; a new agent pays the whole re-read. Do not hand work to a
-  session the user has not said is yours to use.
-- **Budget the task, not only the concurrency.** §5's "3 concurrent" is per
-  message. For a team or workflow also set an agent budget for the whole task
-  up front (a medium workflow stays under 10 agents) and stop to report when
-  it is reached rather than quietly spawning more.
-- **Background work is not polled.** Teams and workflows run in the
-  background and notify on completion. Do not spawn or wake an agent just to
-  check on another; wait for the notification, and never predict its result.
-- **Verification does not scale down with the team.** §6 applies to every
-  member's output and to the workflow's final result. A reviewer agent's
-  verdict is input to the main thread's own check, not a replacement for it.
+- More than one agent on a task — parallel pieces, a team of roles, a
+  workflow — follows `references/teams-and-workflows.md`. A workflow is
+  opt-in by the user, never by the model.
 
 ## 6. Verify — same standard, cheaper path
 
@@ -202,30 +181,33 @@ Rules:
 
 ## 7. SDLC — owner per phase
 
-| Phase | Owner | Model | Token rule |
-|---|---|---|---|
-| 1 Understand & plan | main; a search agent only if the pattern to mirror is unknown | haiku for the search | find ONE existing pattern to mirror, then stop searching |
-| 2 Implement | per §2: inline, or builders in parallel | opus / sonnet per §3 | the brief names the pattern file |
-| 3 Verify | main | — | §6 |
-| 4 Docs | inline if it is a line or a paragraph; else ONE agent for the whole doc set | sonnet | not one agent per file |
-| 5 Commit · push · release | main, never delegated | — | git and deploy state must be first-hand |
-
-Scale the cycle to the change:
-- **Hotfix / one-line fix:** 2 → 3 → 5 inline. No agent, no plan file.
-- **Small feature (one repo, few files):** a few-line plan, inline or one
-  sonnet agent, verify, commit.
-- **Cross-layer feature:** plan first, parallel opus builders, one sonnet doc
-  pass, main-thread verification, user-facing announcement if the project
-  has one.
+Planning, verification and commit · push · release stay on the main thread;
+implementation and docs go out per §2 and §3 (one agent for a whole doc set,
+never one per file). Scale the cycle to the change — a hotfix is inline with
+no plan file, a cross-layer feature is plan → parallel builders → one doc
+pass → main-thread verification. The table per phase and the three cycle
+sizes are in `references/sdlc.md`.
 
 ## 8. Report to the user
 
 One line saying what was done inline and which model did each delegated
 piece. State plainly anything not verified.
 
+Then, for every piece that was delegated, append one line to the project's
+work log (or its prompt log, if that is what the project keeps):
+
+```
+delegated: <job> · <agent type>/<model> · <n> rounds · redo: yes/no · <why, if yes>
+```
+
+These lines are the only data the Tuning section has. If the project keeps no
+such log, put the line in the report instead.
+
 ## Tuning
 
 The thresholds (2 files, ~40 lines, ~10 lines on a top-tier main model,
-~25-line report, 3 agents, a 2–3 role team, ~10 agents per task) are
-starting points, not measurements. Tighten them when subagents keep returning work
-that needed redoing; loosen them when the main context keeps filling.
+~25-line report, 3 concurrent agents, 1 retry, a 2–3 role team, ~10 agents
+per task) are starting points, not measurements. Before changing one, read
+the `delegated:` lines of the last few sessions: tighten when `redo: yes`
+repeats for one model or one kind of job; loosen when the main context kept
+filling while agents sat idle.
