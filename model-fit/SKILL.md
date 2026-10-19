@@ -1,6 +1,6 @@
 ---
 name: model-fit
-description: Decide what the main thread does itself and what goes to a subagent, on which model, across the whole development cycle (plan → implement → verify → docs → commit/release) — tuned for token cost without lowering the standard of proof. Use when starting any feature, fix or refactor, when about to spawn a subagent or a parallel fan-out, when choosing a subagent model (haiku/sonnet/opus/fable), when writing a subagent brief, when forming an agent team or considering a workflow, or when a long session's context is filling up. Triggers on "delegate", "use a subagent", "which model", "save tokens", "ประหยัด token", "ใช้ agent", "ทีม agent", "agent team", "workflow", "sdlc", "วางแผนงาน".
+description: Decide what the main thread does itself and what goes to a subagent, on which model, across the whole development cycle (plan → implement → verify → docs → commit/release) — tuned for token cost without lowering the standard of proof. Use when starting any feature, fix or refactor, when about to spawn a subagent or a parallel fan-out, when choosing a subagent model (haiku/sonnet/opus/fable), when writing a subagent brief, when forming an agent team or considering a workflow, or when a long session's context is filling up. Triggers on "delegate", "use a subagent", "which model", "save tokens", "ประหยัด token", "ใช้ agent", "ทีม agent", "agent team", "workflow", "sdlc", "adlc", "วางแผนงาน".
 ---
 
 # Agent + SDLC — who does what, on which model
@@ -24,8 +24,9 @@ applies — do not load it up front:
   top-tier model (session helper, batching, fewer main turns).
 - `references/teams-and-workflows.md` — more than one agent on a task:
   parallel agents, a team of roles, workflow scripts.
-- `references/sdlc.md` — owner, model and token rule per development phase,
-  and how to scale the cycle (hotfix · small feature · cross-layer).
+- `references/sdlc.md` — the lifecycle run the agentic way (SDLC / ADLC):
+  owner, human gate, agent permissions, model and token rule per phase, the
+  calibrate loop after release, and how to scale the cycle.
 
 ## 1. Roles
 
@@ -179,14 +180,17 @@ Report (≤ 25 lines): paths changed, one line each · gate results · open ques
 - Verification is never skipped to save tokens. If something could not be
   checked, say it was not checked.
 
-## 7. SDLC — owner per phase
+## 7. SDLC / ADLC — owner and gate per phase
 
 Planning, verification and commit · push · release stay on the main thread;
 implementation and docs go out per §2 and §3 (one agent for a whole doc set,
-never one per file). Scale the cycle to the change — a hotfix is inline with
-no plan file, a cross-layer feature is plan → parallel builders → one doc
-pass → main-thread verification. The table per phase and the three cycle
-sizes are in `references/sdlc.md`.
+never one per file). Every phase ends at a human-owned gate — an agent never
+passes its own phase — and the loop runs one phase past release: calibrate,
+from the `delegated:` lines of §8. Scale the cycle to the change — a hotfix
+is inline with no plan file, a cross-layer feature is plan → parallel
+builders → one doc pass → main-thread verification. The table per phase
+(owner, gate, permissions, model) and the three cycle sizes are in
+`references/sdlc.md`.
 
 ## 8. Report to the user
 

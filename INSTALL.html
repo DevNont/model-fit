@@ -131,7 +131,7 @@ th { background: var(--th-bg); }
 <h2 id="zip">3. ในไฟล์ zip มีอะไร</h2>
 <ul>
 <li><code>model-fit/SKILL.md</code> ตัว skill (กติกาแกน)</li>
-<li><code>model-fit/references/</code> อีก 3 ไฟล์ที่ Claude อ่านเฉพาะเมื่อเข้าเคส: <code>expensive-main.md</code> (model หลักราคาแพง), <code>teams-and-workflows.md</code> (ทีม agent / workflow), <code>sdlc.md</code> (ตาราง SDLC) ต้อง copy ทั้งโฟลเดอร์</li>
+<li><code>model-fit/references/</code> อีก 3 ไฟล์ที่ Claude อ่านเฉพาะเมื่อเข้าเคส: <code>expensive-main.md</code> (model หลักราคาแพง), <code>teams-and-workflows.md</code> (ทีม agent / workflow), <code>sdlc.md</code> (ตาราง SDLC / ADLC) ต้อง copy ทั้งโฟลเดอร์</li>
 <li><code>INSTALL.html</code> คู่มือฉบับนี้</li>
 </ul>
 
@@ -283,6 +283,21 @@ session ยาวแล้ว ช่วยประหยัด token ในง�
 <li><strong>สัญญาณว่า context เต็ม:</strong> มี compaction summary แทนบทสนทนาเก่าแล้ว · กำลังจะอ่านไฟล์ที่เคยอ่านซ้ำ · ต้องเลื่อนกลับไปดู output เก่าเพื่อตอบ · งานข้ามวันบน session เดิม เจอข้อใดข้อหนึ่ง ให้ลดเกณฑ์ inline ลงทันที</li>
 <li><strong>บันทึกทุกงานที่ส่งต่อ 1 บรรทัด:</strong> <code>delegated: &lt;job&gt; · &lt;agent type&gt;/&lt;model&gt; · &lt;n&gt; rounds · redo: yes/no · &lt;why&gt;</code> ลง work log หรือ prompt log ของโปรเจกต์ เป็นข้อมูลชุดเดียวที่ใช้ปรับตัวเลขเกณฑ์ในหัวข้อ "ปรับค่า"</li>
 </ul>
+
+<h3>ADLC: gate ต่อช่วงและวงจร calibrate</h3>
+<p>ตาราง SDLC ใน <code>references/sdlc.md</code> ทำแบบ agentic development lifecycle: agent ทำงานข้างในช่วง คนเป็นผู้ผ่าน gate ที่ปิดช่วงนั้น และวงจรไม่จบที่ release</p>
+<div class="scroll"><table>
+<thead><tr><th>ช่วง</th><th>gate ที่ปิดช่วง (คนผ่าน)</th><th>agent ในช่วงนี้ทำได้แค่</th></tr></thead>
+<tbody>
+<tr><td>1 เข้าใจและวางแผน</td><td>แผนที่ main thread เขียนและผู้ใช้รับ (งานเล็ก: ไม่กี่บรรทัดที่บอกก่อนลงมือ)</td><td>อ่านอย่างเดียว ไม่แก้ ไม่ git</td></tr>
+<tr><td>2 ลงมือทำ</td><td>main thread อ่าน <code>git diff --stat</code> และ hunk ที่เสี่ยงแล้ว</td><td>แก้เฉพาะ path ใน brief, รัน gate, ไม่ commit/push/deploy</td></tr>
+<tr><td>3 ตรวจ</td><td>gate เขียว + ตรวจพฤติกรรมจริงหนึ่งครั้งด้วยตัวเอง สิ่งที่ไม่ได้ตรวจต้องบอก</td><td>reviewer อ่าน diff แล้วรายงาน ไม่แก้อะไร</td></tr>
+<tr><td>4 เอกสาร</td><td>main thread อ่าน diff ของเอกสารแล้ว</td><td>แก้เฉพาะไฟล์เอกสารที่ระบุ</td></tr>
+<tr><td>5 commit · push · release</td><td>ผู้ใช้อนุมัติตามที่โปรเจกต์กำหนด เห็นสถานะ git/deploy ด้วยตัวเอง</td><td>ไม่มี agent ในช่วงนี้</td></tr>
+<tr><td>6 calibrate</td><td>เขียนบรรทัด <code>delegated:</code> ของงานแล้ว ทบทวนตัวเลขเกณฑ์ตอน retro หรือเมื่อ <code>redo: yes</code> ซ้ำสองครั้ง</td><td>—</td></tr>
+</tbody>
+</table></div>
+<p>agent ไม่ผ่าน gate ของตัวเอง ช่วงที่ gate ยังไม่ผ่านไม่เริ่มช่วงถัดไป สิทธิ์แคบที่สุดเป็นค่าเริ่มต้น และไม่มี agent ช่วงไหน commit, push หรือ deploy</p>
 
 <h3>เมื่อ model หลักราคาแพง</h3>
 <p>ใช้เมื่อ session หลักเป็น model ระดับบนสุด (fable หรือ opus ตอนโควตาตึง) ต้นทุนของงานเล็กไม่ได้อยู่ที่จำนวนบรรทัด แต่อยู่ที่ทุกรอบของ main thread ต้องอ่าน context ทั้งหมดซ้ำ skill จึงให้ทำ 5 อย่างนี้</p>

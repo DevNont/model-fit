@@ -14,6 +14,7 @@ skill สำหรับ Claude Code ที่ช่วยตัดสินใ�
 - งานอิสระทำขนานกัน งานต่อเนื่องส่งให้ agent ตัวเดิม
 - มีเกณฑ์สามชั้นเมื่อต้องใช้ agent มากกว่าหนึ่งตัว: agent ขนานกัน → ทีม agent แยก role (builder/reviewer) → workflow ที่ผู้ใช้สั่งเอง ไม่ข้ามชั้นถ้าชั้นถูกกว่ายังพอ
 - คุณภาพไม่ตก เพราะทุกผลงานจาก agent ถูกตรวจเองก่อนรายงานว่าเสร็จ
+- ตาราง SDLC ทำแบบ ADLC (agentic development lifecycle): agent ทำงานในแต่ละช่วง คนเป็นผู้ผ่าน gate ของทุกช่วง agent ไม่ผ่านงานตัวเอง และมีช่วง calibrate หลังปล่อยงาน
 - มี feedback loop: ทุกงานที่ส่งต่อบันทึก 1 บรรทัด (agent/model · จำนวนรอบ · ต้องแก้ไหม) ลง work log ของโปรเจกต์ เพื่อปรับเกณฑ์จากข้อมูลจริง
 - ทั้งทีมแบ่งงานแบบเดียวกัน
 
@@ -91,5 +92,5 @@ echo 'ก่อนเริ่มงานฟีเจอร์ แก้บั�
 | `model-fit/SKILL.md` | ตัว skill (กติกาแกน โหลดทุกครั้ง) |
 | `model-fit/references/expensive-main.md` | งานเล็กเมื่อ model หลักราคาแพง (อ่านเมื่อเข้าเคส) |
 | `model-fit/references/teams-and-workflows.md` | ทีม agent และ workflow (อ่านเมื่อใช้ agent มากกว่าหนึ่งตัว) |
-| `model-fit/references/sdlc.md` | ตาราง SDLC ต่อช่วง และขนาดของรอบงาน |
+| `model-fit/references/sdlc.md` | ตาราง SDLC / ADLC ต่อช่วง: เจ้าของ, gate, สิทธิ์ของ agent, model, ช่วง calibrate และขนาดของรอบงาน |
 | `INSTALL.html` | คู่มือติดตั้งและใช้งานภาษาไทย |
