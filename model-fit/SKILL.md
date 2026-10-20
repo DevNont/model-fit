@@ -194,8 +194,22 @@ builders → one doc pass → main-thread verification. The table per phase
 
 ## 8. Report to the user
 
-One line saying what was done inline and which model did each delegated
-piece. State plainly anything not verified.
+Every report that closes a task says who did what — the user cannot see
+the tool calls, so this is the only place the split is visible. One line per
+piece, inline work included, in this shape:
+
+```
+Who did what:
+- <piece> — inline, <main model>
+- <piece> — <agent type>/<model>, <n> rounds, verified by <the check the main thread ran>
+Not verified: <what, and why> (or "nothing")
+```
+
+Name the actual model that ran, not the one that was requested: when a
+`model` override was rejected and the work dropped a tier (§3), the line
+says the tier that did it. A piece nobody verified is listed under "Not
+verified", never silently under the first list. Skip the block only when the
+whole task was inline and nothing was delegated — then one line saying so.
 
 Then, for every piece that was delegated, append one line to the project's
 work log (or its prompt log, if that is what the project keeps):
