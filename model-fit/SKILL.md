@@ -1,6 +1,6 @@
 ---
 name: model-fit
-description: Decide what the main thread does itself and what goes to a subagent, on which model, across the whole development cycle (plan → implement → verify → docs → commit/release) — tuned for token cost without lowering the standard of proof. Use when starting any feature, fix or refactor, when about to spawn a subagent or a parallel fan-out, when choosing a subagent model (haiku/sonnet/opus/fable), when writing a subagent brief, when forming an agent team or considering a workflow, or when a long session's context is filling up. Triggers on "delegate", "use a subagent", "which model", "save tokens", "ประหยัด token", "ใช้ agent", "ทีม agent", "agent team", "workflow", "sdlc", "adlc", "วางแผนงาน".
+description: Decide what the main thread does itself and what goes to a subagent, on which model, across the whole development cycle (plan → implement → verify → docs → commit/release) — tuned for token cost without lowering the standard of proof. Always on: load it first thing in every session and on every prompt, and open every reply with the `model-fit:` line. Use when starting any feature, fix or refactor, when about to spawn a subagent or a parallel fan-out, when choosing a subagent model (haiku/sonnet/opus/fable), when writing a subagent brief, when forming an agent team or considering a workflow, or when a long session's context is filling up. Triggers on "delegate", "use a subagent", "which model", "save tokens", "ประหยัด token", "ใช้ agent", "ทีม agent", "agent team", "workflow", "sdlc", "adlc", "วางแผนงาน".
 ---
 
 # Agent + SDLC — who does what, on which model
@@ -27,6 +27,25 @@ applies — do not load it up front:
 - `references/sdlc.md` — the lifecycle run the agentic way (SDLC / ADLC):
   owner, human gate, agent permissions, model and token rule per phase, the
   calibrate loop after release, and how to scale the cycle.
+
+## 0. Always on
+
+This skill is not reserved for feature work. Every prompt in every project
+goes through it: load it first thing in a session and again after a
+compaction or resume, before any other tool call. The first line of every
+reply says so and names the split chosen —
+
+```
+model-fit: inline (<main model>)
+model-fit: agent <type>/<model> ×<n> + inline verify
+model-fit: inline, no agent          ← a question-only prompt
+```
+
+— so the user can see, on every answer, that the split was decided and not
+skipped. A machine or repo enforces this with the bundled hook: run
+`node <skill dir>/hooks/install.js` once (add `--project` for one repo); it
+registers `hooks/model-fit-gate.sh` on SessionStart and UserPromptSubmit and
+writes the rule into CLAUDE.md. Rerun it after `npx skills update`.
 
 ## 1. Roles
 

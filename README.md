@@ -55,26 +55,30 @@ git add .claude/skills/model-fit && git commit -m "add model-fit skill"
 - หรือปล่อยให้โหลดเอง เมื่อเริ่มงานฟีเจอร์ จะเปิด subagent เลือก model หรือพูดถึงการประหยัด token
 - หรือบังคับทุกครั้ง ตามหัวข้อถัดไป
 
-## ให้ทุก session ใช้โดยอัตโนมัติ
+## บังคับใช้ทุก session ทุก prompt (hook)
 
-ติดตั้งแล้วทุก session ใช้ skill ได้ แต่ Claude จะโหลดเฉพาะเมื่อเห็นว่างานเข้าข่าย ถ้าต้องการให้โหลดทุกครั้ง ใส่บรรทัดนี้ใน `CLAUDE.md`:
+ติดตั้ง skill อย่างเดียว Claude จะโหลดเฉพาะเมื่อเห็นว่างานเข้าข่าย บางงานจึงหลุด ตั้งแต่ 2026-10-21 skill มี hook มาในโฟลเดอร์ `hooks/` ที่บังคับทุก prompt ของทุกโปรเจกต์บนเครื่อง: โหลด model-fit ก่อน ตัดสินใจผ่าน model-fit และเปิดคำตอบทุกครั้งด้วยบรรทัด `model-fit: <split>` เช่น `model-fit: inline (opus)` หรือ `model-fit: agent Explore/haiku ×2 + inline verify`
 
-```
-ก่อนเริ่มงานฟีเจอร์ แก้บั๊ก refactor หรือเปิด subagent ให้โหลด skill model-fit ก่อนเสมอ
-```
-
-| ขอบเขต | ไฟล์ที่ใส่บรรทัด | skill ต้องอยู่ที่ |
-|---|---|---|
-| ทุกโปรเจกต์บนเครื่องนี้ รวม session ที่จะเปิดในอนาคต | `~/.claude/CLAUDE.md` (ถ้ายังไม่มีให้สร้าง) | `~/.claude/skills/model-fit/` |
-| ทุกคนที่ทำงานใน repo หนึ่ง | `CLAUDE.md` ของ repo แล้ว commit | `.claude/skills/model-fit/` ใน repo |
-
-สร้างไฟล์ระดับเครื่องด้วยคำสั่งเดียว (macOS / Linux):
+ติดตั้ง hook ครั้งเดียวต่อเครื่อง (ต้องมี node ซึ่ง Claude Code ใช้อยู่แล้ว):
 
 ```bash
-echo 'ก่อนเริ่มงานฟีเจอร์ แก้บั๊ก refactor หรือเปิด subagent ให้โหลด skill model-fit ก่อนเสมอ' >> ~/.claude/CLAUDE.md
+node ~/.agents/skills/model-fit/hooks/install.js
 ```
 
-บรรทัดใน `CLAUDE.md` เป็นคำสั่งถึง Claude ไม่ใช่การบังคับระดับระบบ และเครื่องอื่นต้องติดตั้ง skill กับสร้างไฟล์นี้เองอีกครั้ง
+สิ่งที่คำสั่งทำ (ทำซ้ำได้ ไม่ซ้อน):
+
+| ทำอะไร | ที่ไหน |
+|---|---|
+| ลงทะเบียน `hooks/model-fit-gate.sh` ที่ `SessionStart` และ `UserPromptSubmit` (สำรองไฟล์เดิมเป็น `settings.json.bak-model-fit`) | `~/.claude/settings.json` |
+| เพิ่มกฎ "always on" ระหว่าง `<!-- model-fit:begin -->` … `<!-- model-fit:end -->` | `~/.claude/CLAUDE.md` |
+
+| ขอบเขต | คำสั่ง | skill ต้องอยู่ที่ |
+|---|---|---|
+| ทุกโปรเจกต์บนเครื่องนี้ รวม session ในอนาคต | `node ~/.agents/skills/model-fit/hooks/install.js` | `~/.agents/skills/model-fit/` (ติดตั้งด้วย `-g`) |
+| ทุกคนที่ทำงานใน repo หนึ่ง | `node .agents/skills/model-fit/hooks/install.js --project` ที่ root ของ repo แล้ว commit `.claude/settings.json` + `CLAUDE.md` | `.agents/skills/model-fit/` ใน repo |
+| ถอน | เพิ่ม `--remove` ต่อท้ายคำสั่งเดิม | |
+
+หลัง `npx skills update` ให้รัน install.js ซ้ำ (path ของ hook เดิมยังใช้ได้ แต่กฎใน CLAUDE.md อาจเปลี่ยน) และเปิด session ใหม่ให้ hook เริ่มทำงาน hook เป็นข้อความถึง Claude ทุก prompt ไม่ใช่การบล็อกระดับระบบ แต่มาพร้อมกฎใน CLAUDE.md และ §0 ของ skill จึงหลุดยากกว่าบรรทัดเดียวใน CLAUDE.md มาก
 
 ## ข้อควรรู้
 
@@ -93,5 +97,7 @@ echo 'ก่อนเริ่มงานฟีเจอร์ แก้บั�
 | `model-fit/SKILL.md` | ตัว skill (กติกาแกน โหลดทุกครั้ง) |
 | `model-fit/references/expensive-main.md` | งานเล็กเมื่อ model หลักราคาแพง (อ่านเมื่อเข้าเคส) |
 | `model-fit/references/teams-and-workflows.md` | ทีม agent และ workflow (อ่านเมื่อใช้ agent มากกว่าหนึ่งตัว) |
+| `model-fit/hooks/model-fit-gate.sh` | hook ที่ย้ำกฎทุก prompt (SessionStart + UserPromptSubmit) |
+| `model-fit/hooks/install.js` | ตัวติดตั้ง/ถอน hook และกฎใน CLAUDE.md (`--project`, `--remove`) |
 | `model-fit/references/sdlc.md` | ตาราง SDLC / ADLC ต่อช่วง: เจ้าของ, gate, สิทธิ์ของ agent, model, ช่วง calibrate และขนาดของรอบงาน |
 | `INSTALL.html` | คู่มือติดตั้งและใช้งานภาษาไทย |

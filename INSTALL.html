@@ -132,6 +132,7 @@ th { background: var(--th-bg); }
 <ul>
 <li><code>model-fit/SKILL.md</code> ตัว skill (กติกาแกน)</li>
 <li><code>model-fit/references/</code> อีก 3 ไฟล์ที่ Claude อ่านเฉพาะเมื่อเข้าเคส: <code>expensive-main.md</code> (model หลักราคาแพง), <code>teams-and-workflows.md</code> (ทีม agent / workflow), <code>sdlc.md</code> (ตาราง SDLC / ADLC) ต้อง copy ทั้งโฟลเดอร์</li>
+<li><code>model-fit/hooks/</code> hook บังคับทุก prompt (<code>model-fit-gate.sh</code>) และตัวติดตั้ง (<code>install.js</code>)</li>
 <li><code>INSTALL.html</code> คู่มือฉบับนี้</li>
 </ul>
 
@@ -178,18 +179,19 @@ git commit -m "add model-fit skill"</code></pre></div>
 <div class="scroll"><pre><code>ก่อนเริ่มงานฟีเจอร์ แก้บั๊ก refactor หรือเปิด subagent ให้โหลด skill model-fit ก่อนเสมอ</code></pre></div>
 </li>
 </ol>
-<h3>ให้ทุก session ใช้โดยอัตโนมัติ</h3>
-<p>ติดตั้ง skill แล้ว ทุก session ใช้ได้ แต่ Claude จะโหลดเฉพาะเมื่อเห็นว่างานเข้าข่าย ถ้าต้องการให้โหลดทุกครั้ง ให้ใส่บรรทัดบังคับด้านบนไว้ในไฟล์ CLAUDE.md ตามขอบเขตที่ต้องการ</p>
+<h3>บังคับใช้ทุก session ทุก prompt (hook)</h3>
+<p>ติดตั้ง skill อย่างเดียว Claude จะโหลดเฉพาะเมื่อเห็นว่างานเข้าข่าย บางงานจึงหลุด ตั้งแต่ 2026-10-21 skill มี hook ในโฟลเดอร์ <code>hooks/</code> ที่บังคับทุก prompt ของทุกโปรเจกต์บนเครื่อง: โหลด model-fit ก่อน ตัดสินใจผ่าน model-fit และเปิดคำตอบทุกครั้งด้วยบรรทัด <code>model-fit: &lt;split&gt;</code> เช่น <code>model-fit: inline (opus)</code> หรือ <code>model-fit: agent Explore/haiku ×2 + inline verify</code></p>
+<p>ติดตั้ง hook ครั้งเดียวต่อเครื่อง (ต้องมี node ซึ่ง Claude Code ใช้อยู่แล้ว):</p>
+<div class="scroll"><pre><code>node ~/.agents/skills/model-fit/hooks/install.js</code></pre></div>
 <div class="scroll"><table>
-<thead><tr><th>ขอบเขต</th><th>ไฟล์ที่ใส่บรรทัดบังคับ</th><th>skill ต้องอยู่ที่</th></tr></thead>
+<thead><tr><th>ขอบเขต</th><th>คำสั่ง</th><th>skill ต้องอยู่ที่</th></tr></thead>
 <tbody>
-<tr><td>ทุกโปรเจกต์บนเครื่องนี้ รวม session ที่จะเปิดในอนาคต</td><td><code>~/.claude/CLAUDE.md</code> (ถ้ายังไม่มีให้สร้าง)</td><td><code>~/.claude/skills/model-fit/</code></td></tr>
-<tr><td>ทุกคนที่ทำงานใน repo หนึ่ง</td><td><code>CLAUDE.md</code> ของ repo แล้ว commit</td><td><code>.claude/skills/model-fit/</code> ใน repo</td></tr>
+<tr><td>ทุกโปรเจกต์บนเครื่องนี้ รวม session ในอนาคต</td><td><code>node ~/.agents/skills/model-fit/hooks/install.js</code></td><td><code>~/.agents/skills/model-fit/</code> (ติดตั้งด้วย <code>-g</code>)</td></tr>
+<tr><td>ทุกคนที่ทำงานใน repo หนึ่ง</td><td><code>node .agents/skills/model-fit/hooks/install.js --project</code> ที่ root ของ repo แล้ว commit <code>.claude/settings.json</code> + <code>CLAUDE.md</code></td><td><code>.agents/skills/model-fit/</code> ใน repo</td></tr>
+<tr><td>ถอน</td><td>เพิ่ม <code>--remove</code> ต่อท้ายคำสั่งเดิม</td><td></td></tr>
 </tbody>
 </table></div>
-<p>สร้างไฟล์ระดับเครื่องด้วยคำสั่งเดียว (macOS / Linux):</p>
-<div class="scroll"><pre><code>echo 'ก่อนเริ่มงานฟีเจอร์ แก้บั๊ก refactor หรือเปิด subagent ให้โหลด skill model-fit ก่อนเสมอ' &gt;&gt; ~/.claude/CLAUDE.md</code></pre></div>
-<p>บรรทัดใน CLAUDE.md เป็นคำสั่งถึง Claude ไม่ใช่การบังคับระดับระบบ และเครื่องอื่นต้องติดตั้ง skill กับสร้างไฟล์นี้เองอีกครั้ง</p>
+<p>คำสั่งทำสองอย่าง (รันซ้ำได้ ไม่ซ้อน): ลงทะเบียน <code>hooks/model-fit-gate.sh</code> ที่ <code>SessionStart</code> และ <code>UserPromptSubmit</code> ใน <code>settings.json</code> (สำรองไฟล์เดิมเป็น <code>settings.json.bak-model-fit</code>) และเพิ่มกฎ "always on" ใน <code>CLAUDE.md</code> ระหว่าง <code>&lt;!-- model-fit:begin --&gt;</code> … <code>&lt;!-- model-fit:end --&gt;</code> หลัง <code>npx skills update</code> ให้รันซ้ำ แล้วเปิด session ใหม่ให้ hook เริ่มทำงาน hook เป็นข้อความถึง Claude ทุก prompt ไม่ใช่การบล็อกระดับระบบ แต่มาพร้อมกฎใน CLAUDE.md และ §0 ของ skill จึงหลุดยากกว่าบรรทัดเดียวใน CLAUDE.md มาก</p>
 <h3>ตัวอย่าง prompt</h3>
 <div class="scroll"><pre><code>/model-fit เพิ่มหน้ารายงานใหม่ ต้องแก้ทั้ง backend และ frontend วางแผนให้หน่อย
 ต้องสำรวจโค้ดหลายไฟล์ ควรใช้ subagent ไหม และ model อะไร
